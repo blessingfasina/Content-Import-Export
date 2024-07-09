@@ -1,0 +1,13 @@
+{
+    "name": "blessingfasina/content-import-export",
+    "description": "A plugin to import and export all content including posts, pages, comments, custom fields, terms, navigation menus, and custom posts.",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=7.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "CIE\\": "includes/"
+        }
+    }
+}
