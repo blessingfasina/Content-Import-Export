@@ -3,19 +3,7 @@
 class CIE_Export {
 
     public function __construct() {
-        add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_post_cie_export_content', array( $this, 'export_content' ) );
-    }
-
-    public function add_admin_menu() {
-        add_submenu_page(
-            'tools.php',
-            'Export Content',
-            'Export Content',
-            'manage_options',
-            'cie-export',
-            array( $this, 'export_page' )
-        );
     }
 
     public function export_page() {
@@ -52,24 +40,54 @@ class CIE_Export {
             wp_die( __( 'No content types selected.', 'content-import-export' ) );
         }
 
-        // Export logic goes here...
+        $export_data = array();
 
-        // Temporary file creation
-        $file = tempnam(sys_get_temp_dir(), 'cie_export_');
+        // Export logic for each content type.
+        if ( in_array( 'posts', $content_types ) ) {
+            $export_data['posts'] = get_posts( array( 'numberposts' => -1 ) );
+        }
+        if ( in_array( 'pages', $content_types ) ) {
+            $export_data['pages'] = get_pages();
+        }
+        if ( in_array( 'comments', $content_types ) ) {
+            $export_data['comments'] = get_comments();
+        }
+        if ( in_array( 'custom_fields', $content_types ) ) {
+            // Fetch custom fields logic.
+        }
+        if ( in_array( 'terms', $content_types ) ) {
+            $export_data['terms'] = get_terms( array( 'hide_empty' => false ) );
+        }
+        if ( in_array( 'menus', $content_types ) ) {
+            $export_data['menus'] = wp_get_nav_menus();
+        }
+        if ( in_array( 'custom_posts', $content_types ) ) {
+            // Fetch custom post types logic.
+            $custom_post_types = get_post_types( array( '_builtin' => false ), 'objects' );
+            foreach ( $custom_post_types as $post_type ) {
+                $export_data['custom_posts'][ $post_type->name ] = get_posts( array( 'post_type' => $post_type->name, 'numberposts' => -1 ) );
+            }
+        }
+
+        // Create JSON file.
+        $json_data = json_encode( $export_data );
+
+        // Create ZIP file.
         $zip = new ZipArchive();
-        if ($zip->open($file, ZipArchive::CREATE) === TRUE) {
-            // Add content files to the ZIP archive...
+        $zip_file = tempnam( sys_get_temp_dir(), 'cie_export_' ) . '.zip';
+        if ( $zip->open( $zip_file, ZipArchive::CREATE ) === TRUE ) {
+            $zip->addFromString( 'content.json', $json_data );
             $zip->close();
         } else {
             wp_die( __( 'Failed to create export file.', 'content-import-export' ) );
         }
 
-        // Download file and remove it after download
-        header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="content-export.zip"');
-        header('Content-Length: ' . filesize($file));
-        readfile($file);
-        unlink($file);
+        // Download ZIP file and remove it after download.
+        header( 'Content-Type: application/zip' );
+        header( 'Content-Disposition: attachment; filename="content-export.zip"' );
+        header( 'Content-Length: ' . filesize( $zip_file ) );
+        readfile( $zip_file );
+        unlink( $zip_file );
 
         exit;
     }
